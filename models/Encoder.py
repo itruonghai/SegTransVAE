@@ -84,4 +84,11 @@ class Encoder(nn.Module):
                             self.encoder_block4_1(x3_down))))  #(1, 128, 16, 16, 16)
         return x1, x2, x3, output 
 
+if __name__ == "__main__":   
+    x = torch.rand((1, 4, 128, 128, 128))
+    vae = Encoder(4, 32)
+    _, _, _, y = vae(x)
+    print(y.shape)
+
+
     
