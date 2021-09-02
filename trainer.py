@@ -8,9 +8,19 @@ from monai.transforms import AsDiscrete, Activations, Compose
 import pytorch_lightning as pl
 from models.TransBTS import TransformerBTS
 from data.brats import get_train_dataloader, get_val_dataloader
-
-class BRATS(pl.LightningModule):
+import torch.nn.functional as F
+import torch.nn as nn 
+class loss_vae(nn.Module):
     def __init__(self):
+        super().__init__()
+
+    def forward(self, recon_x, x, mu, sigma):
+        mse = F.mse_loss(recon_x, x)
+        kld = 0.5 * torch.mean(mu ** 2 + sigma ** 2 - torch.log(1e-8 + sigma ** 2) - 1)
+        loss = mse + kld
+        return loss
+class BRATS(pl.LightningModule):
+    def __init__(self, use_VAE = False):
         super().__init__()
         # self.model = SegResNet(
         #         blocks_down = [1,2,2,4],
@@ -20,8 +30,9 @@ class BRATS(pl.LightningModule):
         #         out_channels = 3, 
         #         dropout_prob = 0.2
         #         )
-        self.model = TransformerBTS(128, 8, 4, 3, 512, 8, 4, 4096)
-
+        self.use_vae = use_VAE
+        self.model = TransformerBTS(128, 8, 4, 3, 512, 8, 4, 4096, use_VAE = use_VAE)
+        self.loss_vae = loss_vae()
         self.loss_function = DiceLoss(to_onehot_y=False, sigmoid=True, squared_pred=True)
         self.post_trans_images = Compose(
                 [Activations(sigmoid=True), 
@@ -31,20 +42,24 @@ class BRATS(pl.LightningModule):
         self.dice_metric = DiceMetric(include_background=True, reduction="mean")
         self.dice_metric_batch = DiceMetric(include_background=True, reduction="mean_batch")
         self.best_val_dice = 0
-        self.example_input_array = torch.rand((1,4,128,128,128))
-    def forward(self, x):
-        return self.model(x) 
+#         self.example_input_array = torch.rand((1,4,128,128,128))
+    def forward(self, x, is_validation = True):
+        return self.model(x, is_validation) 
     def training_step(self, batch, batch_index):
         inputs, labels = (batch['image'], batch['label'])
- 
-        outputs = self.forward(inputs)
-        loss = self.loss_function(outputs, labels)
+        if not self.use_vae:
+            outputs = self.forward(inputs, is_validation=False)
+            loss = self.loss_function(outputs, labels)
+        else:
+            outputs, vae_out, mu, sigma = self.forward(inputs, is_validation=False)
+            loss = 0.1 * self.loss_vae(vae_out, inputs, mu, sigma) + \
+                self.loss_function(outputs, labels)
         self.log('train_loss', loss)
         return loss
     def validation_step(self, batch, batch_index):
         inputs, labels = (batch['image'], batch['label'])
         # print(inputs.shape, labels.shape)
- 
+    
         roi_size = (128, 128, 128)
         sw_batch_size = 1
         val_outputs = sliding_window_inference(

@@ -39,9 +39,6 @@ class VAE(nn.Module):
         self.input_shape = input_shape
         self.in_channels = input_shape[1]  #input_shape[0] is batch size
         self.latent_dim = latent_dim
-
-
-
         self.encoder_channels = self.in_channels // 16  
 
         #Encoder
@@ -72,7 +69,6 @@ class VAE(nn.Module):
                 stride = 1, kernel_size = 1),
             nn.Upsample(scale_factor=2, mode = 'nearest'),
 
-
             nn.Conv3d(
                 self.in_channels, self.in_channels // 2, 
                 stride = 1, kernel_size = 1),
@@ -99,24 +95,20 @@ class VAE(nn.Module):
         )
 
 
-
-
     def forward(self, x):   #x has shape = input_shape
         #Encoder
         x = self.VAE_reshape(x) 
-        print(x.shape)
         shape = x.shape
 
         x = x.view(self.in_channels, -1)
         x = self.to_latent_space(x)
         x = x.view(1, self.in_channels)
-        print(x.shape)
 
         mean = self.mean(x)
         logvar = self.logvar(x)
         sigma = torch.exp(0.5 * logvar)
         sample = mean + self.epsilon * torch.exp(logvar)
-        print(sample.shape)
+
         #Decoder
         y = self.to_original_dimension(sample)
         y = y.view(*shape)
