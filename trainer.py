@@ -1,26 +1,24 @@
-from monai.networks.nets import SegResNet, UNETR
-from monai.metrics import compute_meandice, DiceMetric
+# Torch Library
+import torch
+import torch.nn.functional as F
+import torch.nn as nn 
+
+# MONAI
+from monai.networks.nets import SegResNet
+from monai.metrics import DiceMetric
 from monai.losses import DiceLoss
 from monai.inferers import sliding_window_inference
 from monai.data import decollate_batch
-import torch
 from monai.transforms import AsDiscrete, Activations, Compose
+
+# Pytorch Lightning
 import pytorch_lightning as pl
+
+# Custom Libraries
 from models.SegTransVAE import SegTransVAE
 from data.brats import get_train_dataloader, get_val_dataloader
-import torch.nn.functional as F
-import torch.nn as nn 
-# from adabelief_pytorch import AdaBelief
+from models.VAE import loss_vae
 
-class loss_vae(nn.Module):
-    def __init__(self):
-        super().__init__()
-
-    def forward(self, recon_x, x, mu, sigma):
-        mse = F.mse_loss(recon_x, x)
-        kld = 0.5 * torch.mean(mu ** 2 + sigma ** 2 - torch.log(1e-8 + sigma ** 2) - 1)
-        loss = mse + kld
-        return loss
 class BRATS(pl.LightningModule):
     def __init__(self, use_VAE = False):
         super().__init__()
@@ -54,9 +52,13 @@ class BRATS(pl.LightningModule):
             loss = self.loss_function(outputs, labels)
         else:
             outputs, vae_out, mu, sigma = self.forward(inputs, is_validation=False)
-            loss = 0.1 * self.loss_vae(vae_out, inputs, mu, sigma) + \
-                self.loss_function(outputs, labels)
-        self.log('train_loss', loss)
+            vae_loss = 0.1 * self.loss_vae(vae_out, inputs, mu, sigma)
+            dice_loss = self.loss_function(outputs, labels)
+            loss = vae_loss  +  dice_loss 
+            self.log('train/vae_loss', vae_loss)
+            self.log('train/dice_loss', dice_loss)
+                
+        self.log('train/loss', loss)
         return loss
     def validation_step(self, batch, batch_index):
         inputs, labels = (batch['image'], batch['label'])
@@ -84,10 +86,10 @@ class BRATS(pl.LightningModule):
         metric_et = metric_batch[2].item()
         self.dice_metric.reset()
         self.dice_metric_batch.reset()
-        self.log('val_MeanDiceScore', mean_val_dice)
-        self.log('val_DiceTC', metric_tc)
-        self.log('val_DiceWT', metric_wt)
-        self.log('val_DiceET', metric_et)
+        self.log('val/MeanDiceScore', mean_val_dice)
+        self.log('val/DiceTC', metric_tc)
+        self.log('val/DiceWT', metric_wt)
+        self.log('val/DiceET', metric_et)
         if mean_val_dice > self.best_val_dice:
             self.best_val_dice = mean_val_dice
             self.best_val_epoch = self.current_epoch
@@ -102,14 +104,14 @@ class BRATS(pl.LightningModule):
     
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(
-                    self.model.parameters(), 1e-4, weight_decay=1e-5, amsgrad=True
+                    self.model.parameters(), self.lr, weight_decay=1e-5, amsgrad=True
                     )
-        # optimizer = AdaBelief(self.model.parameters(), 
-        #                     lr=1e-3, eps=1e-8, 
-        #                     betas=(0.9,0.999), weight_decouple = True, 
-        #                     rectify = False)
+#         optimizer = AdaBelief(self.model.parameters(), 
+#                             lr=self.lr, eps=1e-12, 
+#                             betas=(0.9,0.999), weight_decouple = True, 
+#                             rectify = False)
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 100)
-        return optimizer, scheduler
+        return [optimizer], [scheduler]
     
     def train_dataloader(self):
         return get_train_dataloader()

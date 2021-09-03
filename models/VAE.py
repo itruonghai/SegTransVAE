@@ -1,6 +1,7 @@
 import torch 
 import torch.nn as nn
 from models.ResNetBlock import ResNetBlock
+from torch.nn import functional as F
 
 def calculate_total_dimension(a):
     res = 1 
@@ -92,6 +93,17 @@ class VAE(nn.Module):
         y = self.to_original_dimension(sample)
         y = y.view(*shape)
         return self.Reconstruct(y), mean, sigma
+
+class loss_vae(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, recon_x, x, mu, sigma):
+        mse = F.mse_loss(recon_x, x)
+        kld = 0.5 * torch.mean(mu ** 2 + sigma ** 2 - torch.log(1e-8 + sigma ** 2) - 1)
+        loss = mse + kld
+        return loss
+
 if __name__ == "__main__":
     x = torch.rand((1, 128, 16, 16, 16))
     vae = VAE(input_shape = x.shape, latent_dim = 128, num_channels = 4)
