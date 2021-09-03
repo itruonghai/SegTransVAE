@@ -1,8 +1,9 @@
 import torch 
 import torch.nn as nn
+from ResNetBlock import ResNetBlock
 
 
-class Decoder_Upsample(nn.Module):
+class Upsample(nn.Module):
     def __init__(self, in_channel, out_channel):
         super().__init__()
         self.conv1 = nn.Conv3d(in_channel, out_channel, kernel_size = 1)
@@ -14,20 +15,22 @@ class Decoder_Upsample(nn.Module):
         y = torch.cat((prev, x), dim = 1)
         return self.conv2(y)
 
-class DecoderBlock(nn.Module):
-    def __init__(self, in_channel):
-        super().__init__()
-        self.bn1 = nn.BatchNorm3d(in_channel)
-        self.relu1 = nn.ReLU(inplace = True)
-        self.conv1 = nn.Conv3d(in_channel, in_channel, kernel_size = 3, padding = 1)
-        self.conv2 = nn.Conv3d(in_channel, in_channel, kernel_size = 3, padding = 1)
-        self.relu2 = nn.ReLU(inplace = True)
-        self.bn2 = nn.BatchNorm3d(in_channel)
+class FinalConv(nn.Module): # Input channels are equal to output channels
+    def __init__(self, in_channels, out_channels=32, norm="group"):
+        super(FinalConv, self).__init__()
+        if norm == "batch":
+            norm_layer = nn.BatchNorm3d(num_features=in_channels)
+        elif norm == "group":
+            norm_layer = nn.GroupNorm(num_groups=8, num_channels=in_channels)
 
+        self.layer = nn.Sequential(
+            norm_layer,
+            nn.ReLU(inplace=True),
+            nn.Conv3d(in_channels=in_channels, out_channels=out_channels, kernel_size=(1, 1, 1), stride=1, padding=0)
+            )
     def forward(self, x):
-        x1 = self.relu1(self.bn1(self.conv1(x)))
-        x1 = self.relu2(self.bn2(self.conv2(x1)))
-        return x1 + x
+        return self.layer(x)
+
 
 class Decoder(nn.Module):
     def __init__(self, img_dim, patch_dim, embedding_dim):
@@ -36,16 +39,16 @@ class Decoder(nn.Module):
         self.patch_dim = patch_dim 
         self.embedding_dim = embedding_dim
     
-        self.decoder_upsample_1 = Decoder_Upsample(self.embedding_dim // 4, self.embedding_dim // 8)
-        self.decoder_block_1 = DecoderBlock(self.embedding_dim // 8)
+        self.decoder_upsample_1 = Upsample(self.embedding_dim // 4, self.embedding_dim // 8)
+        self.decoder_block_1 = ResNetBlock(self.embedding_dim // 8)
 
-        self.decoder_upsample_2 = Decoder_Upsample(self.embedding_dim // 8, self.embedding_dim // 16)
-        self.decoder_block_2 = DecoderBlock(self.embedding_dim // 16)
+        self.decoder_upsample_2 = Upsample(self.embedding_dim // 8, self.embedding_dim // 16)
+        self.decoder_block_2 = ResNetBlock(self.embedding_dim // 16)
 
-        self.decoder_upsample_3 = Decoder_Upsample(self.embedding_dim // 16, self.embedding_dim // 32)
-        self.decoder_block_3 = DecoderBlock(self.embedding_dim // 32)
+        self.decoder_upsample_3 = Upsample(self.embedding_dim // 16, self.embedding_dim // 32)
+        self.decoder_block_3 = ResNetBlock(self.embedding_dim // 32)
 
-        self.endconv = nn.Conv3d(self.embedding_dim // 32, 3, kernel_size = 1)
+        self.endconv = FinalConv(self.embedding_dim // 32, 3)
 
     def forward(self, x1, x2, x3, x):
 
