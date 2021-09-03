@@ -2,7 +2,6 @@
 import torch 
 import torch.nn as nn
 
-
 #Re-use from encoder block
 def normalization(planes, norm = 'gn'):
     if norm == 'bn':
