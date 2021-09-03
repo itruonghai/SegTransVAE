@@ -1,6 +1,6 @@
 import torch 
 import torch.nn as nn
-from ResNetBlock import ResNetBlock
+from models.ResNetBlock import ResNetBlock
 
 def calculate_total_dimension(a):
     res = 1 
@@ -18,7 +18,13 @@ class VAE(nn.Module):
 
         #Encoder
         self.VAE_reshape = nn.Conv3d(self.in_channels, self.encoder_channels, 
-                     kernel_size = 3, stride = 2, padding=1),
+                     kernel_size = 3, stride = 2, padding=1)
+        # self.VAE_reshape = nn.Sequential(
+        #     nn.GroupNorm(8, self.in_channels), 
+        #     nn.ReLU(),
+        #     nn.Conv3d(self.in_channels, self.encoder_channels, 
+        #              kernel_size = 3, stride = 2, padding=1),
+        # )
 
         flatten_input_shape =  calculate_total_dimension(input_shape)
         flatten_input_shape_after_vae_reshape = \
@@ -69,6 +75,7 @@ class VAE(nn.Module):
 
     def forward(self, x):   #x has shape = input_shape
         #Encoder
+        print(x.shape)
         x = self.VAE_reshape(x) 
         shape = x.shape
 

@@ -1,7 +1,7 @@
 import torch 
 import torch.nn as nn 
 import torch.nn.functional as F 
-from ResNetBlock import ResNetBlock
+from models.ResNetBlock import ResNetBlock
 
 class InitConv(nn.Module):
     def __init__(self, in_channels = 4, out_channels = 16, dropout = 0.2):

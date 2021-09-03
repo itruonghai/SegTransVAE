@@ -1,6 +1,6 @@
 import torch 
 import torch.nn as nn
-from ResNetBlock import ResNetBlock
+from models.ResNetBlock import ResNetBlock
 
 
 class Upsample(nn.Module):

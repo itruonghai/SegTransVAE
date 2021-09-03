@@ -2,3 +2,4 @@ __pycache__
 adung.py 
 test.py
 .DS_Store
+.vscode

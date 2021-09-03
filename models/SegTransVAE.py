@@ -5,7 +5,7 @@ from models.Encoder import Encoder
 from models.Decoder import Decoder
 from models.VAE import VAE
 
-class TransformerBTS(nn.Module):
+class SegTransVAE(nn.Module):
     def __init__(self, img_dim, patch_dim, num_channels, num_classes, 
                 embedding_dim, num_heads, num_layers, hidden_dim,
                 dropout = 0.0, attention_dropout = 0.0,
@@ -55,7 +55,8 @@ class TransformerBTS(nn.Module):
         self.FeatureMapping = FeatureMapping(in_channel = self.embedding_dim)
         self.FeatureMapping1 = FeatureMapping1(in_channel = self.embedding_dim // 4 )
         self.decoder = Decoder(self.img_dim, self.patch_dim, self.embedding_dim)
-        self.vae = VAE(input_shape = (1, 128, 16, 16, 16) , latent_dim= 128, num_channels= self.num_channels)
+        if use_VAE:
+            self.vae = VAE(input_shape = (1, 128, 16, 16, 16) , latent_dim= 128, num_channels= self.num_channels)
     def encode(self, x):
         if self.conv_patch_representation:
             x1, x2, x3, x = self.encoder(x)

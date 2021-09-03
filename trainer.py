@@ -6,10 +6,12 @@ from monai.data import decollate_batch
 import torch
 from monai.transforms import AsDiscrete, Activations, Compose
 import pytorch_lightning as pl
-from models.TransBTS import TransformerBTS
+from models.SegTransVAE import SegTransVAE
 from data.brats import get_train_dataloader, get_val_dataloader
 import torch.nn.functional as F
 import torch.nn as nn 
+# from adabelief_pytorch import AdaBelief
+
 class loss_vae(nn.Module):
     def __init__(self):
         super().__init__()
@@ -31,7 +33,7 @@ class BRATS(pl.LightningModule):
         #         dropout_prob = 0.2
         #         )
         self.use_vae = use_VAE
-        self.model = TransformerBTS(128, 8, 4, 3, 512, 8, 4, 4096, use_VAE = use_VAE)
+        self.model = SegTransVAE(128, 8, 4, 3, 512, 8, 4, 4096, use_VAE = use_VAE)
         self.loss_vae = loss_vae()
         self.loss_function = DiceLoss(to_onehot_y=False, sigmoid=True, squared_pred=True)
         self.post_trans_images = Compose(
@@ -102,7 +104,12 @@ class BRATS(pl.LightningModule):
         optimizer = torch.optim.Adam(
                     self.model.parameters(), 1e-4, weight_decay=1e-5, amsgrad=True
                     )
-        return optimizer
+        # optimizer = AdaBelief(self.model.parameters(), 
+        #                     lr=1e-3, eps=1e-8, 
+        #                     betas=(0.9,0.999), weight_decouple = True, 
+        #                     rectify = False)
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 100)
+        return optimizer, scheduler
     
     def train_dataloader(self):
         return get_train_dataloader()
