@@ -1,4 +1,4 @@
-from monai.utils import first, set_determinism
+from monai.utils import set_determinism
 from monai.transforms import (
     Compose,
     LoadImaged,
