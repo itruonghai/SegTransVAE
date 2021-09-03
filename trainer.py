@@ -20,7 +20,7 @@ from data.brats import get_train_dataloader, get_val_dataloader
 from models.VAE import loss_vae
 
 class BRATS(pl.LightningModule):
-    def __init__(self, use_VAE = False):
+    def __init__(self, use_VAE = False, lr = 1e-4):
         super().__init__()
         # self.model = SegResNet(
         #         blocks_down = [1,2,2,4],
@@ -31,6 +31,7 @@ class BRATS(pl.LightningModule):
         #         dropout_prob = 0.2
         #         )
         self.use_vae = use_VAE
+        self.lr = lr
         self.model = SegTransVAE(128, 8, 4, 3, 512, 8, 4, 4096, use_VAE = use_VAE)
         self.loss_vae = loss_vae()
         self.loss_function = DiceLoss(to_onehot_y=False, sigmoid=True, squared_pred=True)
