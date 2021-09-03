@@ -12,7 +12,7 @@ from monai.transforms import (
     ToTensord,
     CenterSpatialCropd,
 )
-from monai.data import CacheDataset, DataLoader, Dataset, decollate_batch
+from monai.data import DataLoader, Dataset
 import numpy as np
 import json
 set_determinism(seed=0)
@@ -89,7 +89,6 @@ def get_val_dataloader():
                 keys = ['label']),
             CenterSpatialCropd(keys=["image", "label"],
                             roi_size = [128,128,128], 
-                            # roi_size = [96,96,96]
                             ),
             NormalizeIntensityd(keys = "image",
                                nonzero = True,
