@@ -1,28 +1,16 @@
 from monai.utils import first, set_determinism
 from monai.transforms import (
-    AsDiscrete,
-    AddChanneld,
     Compose,
-    CropForegroundd,
     LoadImaged,
     ConvertToMultiChannelBasedOnBratsClassesd,
     RandSpatialCropd,
     RandFlipd,
     MapTransform,
-    RandFlipd,
-    Activations,
-    AsDiscrete,
     NormalizeIntensityd, 
     RandScaleIntensityd,
     RandShiftIntensityd,
-    Orientationd,
-    RandCropByPosNegLabeld,
-    ScaleIntensityRanged,
-    Spacingd,
-    AsChannelFirstd,
     ToTensord,
     CenterSpatialCropd,
-    SplitChannel
 )
 from monai.data import CacheDataset, DataLoader, Dataset, decollate_batch
 import numpy as np
@@ -36,27 +24,27 @@ print(len(train_files), len(val_files), len(test_files))
 class ConvertToMultiChannelBasedOnBratsClassesd(MapTransform):
     """
     Convert labels to multi channels based on brats classes:
-    label 1 is the peritumoral edema
-    label 2 is the GD-enhancing tumor
-    label 3 is the necrotic and non-enhancing tumor core
+    label 2 is the peritumoral edema
+    label 4 is the GD-enhancing tumor
+    label 1 is the necrotic and non-enhancing tumor core
     The possible classes are TC (Tumor core), WT (Whole tumor)
     and ET (Enhancing tumor).
- 
+
     """
  
     def __call__(self, data):
         d = dict(data)
         for key in self.keys:
             result = []
-            # merge label 2 and label 3 to construct TC
+            # merge label 1 and label 4 to construct TC
             result.append(np.logical_or(d[key] == 1, d[key] == 4))
-            # merge labels 1, 2 and 3 to construct WT
+            # merge labels 1, 2 and 4 to construct WT
             result.append(
                 np.logical_or(
                     np.logical_or(d[key] == 1, d[key] == 4), d[key] == 2
                 )
             )
-            # label 2 is ET
+            # label 4 is ET
             result.append(d[key] == 4)
             d[key] = np.stack(result, axis=0).astype(np.float32)
         return d
@@ -87,8 +75,7 @@ def get_train_dataloader():
             ToTensord(keys=["image", "label"]),
         ]
     )
-    train_ds = Dataset(
-        data=train_files, transform=train_transform)
+    train_ds = Dataset(data=train_files, transform=train_transform)
     train_loader = DataLoader(train_ds, batch_size=1, shuffle=True, num_workers=4)
 
     
@@ -110,8 +97,7 @@ def get_val_dataloader():
             ToTensord(keys=["image", "label"]),
         ]
     )
-    val_ds = Dataset(
-        data=val_files, transform=val_transform)
+    val_ds = Dataset(data=val_files, transform=val_transform)
     val_loader = DataLoader(val_ds, batch_size=1, shuffle=False, num_workers=4)
     
     return val_loader
