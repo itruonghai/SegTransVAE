@@ -1,24 +1,24 @@
-from monai.networks.nets import SegResNet, UNETR
-from monai.metrics import compute_meandice, DiceMetric
+# Torch Library
+import torch
+import torch.nn.functional as F
+import torch.nn as nn 
+
+# MONAI
+from monai.networks.nets import SegResNet
+from monai.metrics import DiceMetric
 from monai.losses import DiceLoss
 from monai.inferers import sliding_window_inference
 from monai.data import decollate_batch
-import torch
 from monai.transforms import AsDiscrete, Activations, Compose
+
+# Pytorch Lightning
 import pytorch_lightning as pl
+
+# Custom Libraries
 from models.TransBTS import TransformerBTS
 from data.brats import get_train_dataloader, get_val_dataloader
-import torch.nn.functional as F
-import torch.nn as nn 
-class loss_vae(nn.Module):
-    def __init__(self):
-        super().__init__()
+from models.LossVAE import loss_vae
 
-    def forward(self, recon_x, x, mu, sigma):
-        mse = F.mse_loss(recon_x, x)
-        kld = 0.5 * torch.mean(mu ** 2 + sigma ** 2 - torch.log(1e-8 + sigma ** 2) - 1)
-        loss = mse + kld
-        return loss
 class BRATS(pl.LightningModule):
     def __init__(self, use_VAE = False):
         super().__init__()
