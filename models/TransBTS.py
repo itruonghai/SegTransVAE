@@ -4,15 +4,7 @@ from models.Transformer import Transformer, FixedPositionalEncoding, LearnedPosi
 from models.Encoder import Encoder
 from models.Decoder import Decoder
 from models.VAE import VAE
-# class loss_rectr(nn.Module):
-#     def __init__(self):
-#         super(loss_function, self).__init__()
 
-#     def forward(self, recon_x, x, mu, sigma):
-#         mse = F.mse_loss(recon_x, x)
-#         kld = 0.5 * torch.mean(mu ** 2 + sigma ** 2 - torch.log(1e-8 + sigma ** 2) - 1)
-#         loss = mse + kld
-#         return loss
 class TransformerBTS(nn.Module):
     def __init__(self, img_dim, patch_dim, num_channels, num_classes, 
                 embedding_dim, num_heads, num_layers, hidden_dim,
@@ -79,12 +71,9 @@ class TransformerBTS(nn.Module):
 
         return x1, x2, x3, x
 
-
     def decode(self, x1, x2, x3, x):
         #x: (1, 4096, 512) -> (1, 16, 16, 16, 512)
         return self.decoder(x1, x2, x3, x)
-
-
 
     def forward(self, x, is_validation = True):
         x1, x2, x3, x = self.encode(x)
@@ -104,36 +93,53 @@ class TransformerBTS(nn.Module):
             return y, vae_out, mu, sigma
         else:
             return y
-        
-
 
 
 class FeatureMapping(nn.Module):
-    def __init__(self, in_channel):
+    def __init__(self, in_channel, norm = 'gn'):
         super().__init__()
-        self.conv1 = nn.Conv3d(in_channel, in_channel // 4, kernel_size = 3, padding = 1)
-        self.bn1 = nn.BatchNorm3d(in_channel // 4)
-        self.relu1 = nn.ReLU(inplace= True)
-        self.conv2 = nn.Conv3d(in_channel // 4, in_channel // 4, kernel_size = 3, padding = 1)
-        self.bn2 = nn.BatchNorm3d(in_channel // 4)
-        self.relu2 = nn.ReLU(inplace= True)
-
+        if norm == 'bn':
+            norm_layer_1 = nn.BatchNorm3d(in_channel // 4)
+            norm_layer_2 = nn.BatchNorm3d(in_channel // 4)
+        elif norm == 'gn':
+            norm_layer_1 = nn.GroupNorm(8, in_channel // 4)
+            norm_layer_2 = nn.GroupNorm(8, in_channel // 4)
+        elif norm == 'instance':
+            norm_layer_1 = nn.InstanceNorm3d(in_channel // 4)
+            norm_layer_2 = nn.InstanceNorm3d(in_channel // 4)
+        self.feature_mapping = nn.Sequential(
+            nn.Conv3d(in_channel, in_channel // 4, kernel_size = 3, padding = 1),
+            norm_layer_1,
+            nn.ReLU(inplace= True),
+            nn.Conv3d(in_channel // 4, in_channel // 4, kernel_size = 3, padding = 1),
+            norm_layer_2,
+            nn.ReLU(inplace= True)
+        )
+        
     def forward(self, x):
-        x = self.relu1(self.bn1(self.conv1(x)))
-        x = self.relu2(self.bn2(self.conv2(x)))
-        return x   
+        return self.feature_mapping(x)   
+
 
 class FeatureMapping1(nn.Module):
-    def __init__(self, in_channel):
+    def __init__(self, in_channel, norm = 'gn'):
         super().__init__()
-        self.conv1 = nn.Conv3d(in_channel, in_channel, kernel_size = 3, padding = 1)
-        self.bn1 = nn.BatchNorm3d(in_channel)
-        self.relu1 = nn.ReLU(inplace= True)
-        self.conv2 = nn.Conv3d(in_channel, in_channel, kernel_size = 3, padding = 1)
-        self.bn2 = nn.BatchNorm3d(in_channel)
-        self.relu2 = nn.ReLU(inplace= True)
-
+        if norm == 'bn':
+            norm_layer_1 = nn.BatchNorm3d(in_channel)
+            norm_layer_2 = nn.BatchNorm3d(in_channel)
+        elif norm == 'gn':
+            norm_layer_1 = nn.GroupNorm(8, in_channel)
+            norm_layer_2 = nn.GroupNorm(8, in_channel)
+        elif norm == 'instance':
+            norm_layer_1 = nn.InstanceNorm3d(in_channel)
+            norm_layer_2 = nn.InstanceNorm3d(in_channel)
+        self.feature_mapping1 = nn.Sequential(
+            nn.Conv3d(in_channel, in_channel, kernel_size = 3, padding = 1),
+            norm_layer_1,
+            nn.ReLU(inplace= True),
+            nn.Conv3d(in_channel, in_channel, kernel_size = 3, padding = 1),
+            norm_layer_2,
+            nn.ReLU(inplace= True)
+        )
     def forward(self, x):
-        x1 = self.relu1(self.bn1(self.conv1(x)))
-        x1 = self.relu2(self.bn2(self.conv1(x1)))
-        return x1 + x    
+        y = self.feature_mapping1(x)
+        return x + y    

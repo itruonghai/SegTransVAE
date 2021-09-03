@@ -17,12 +17,9 @@ class VAE(nn.Module):
         self.encoder_channels = self.in_channels // 16  
 
         #Encoder
-        self.VAE_reshape = nn.Sequential(
-            nn.GroupNorm(8, self.in_channels), 
-            nn.ReLU(),
-            nn.Conv3d(self.in_channels, self.encoder_channels, 
+        self.VAE_reshape = nn.Conv3d(self.in_channels, self.encoder_channels, 
                      kernel_size = 3, stride = 2, padding=1),
-        )
+
         flatten_input_shape =  calculate_total_dimension(input_shape)
         flatten_input_shape_after_vae_reshape = \
             flatten_input_shape * self.encoder_channels // (8 * self.in_channels)

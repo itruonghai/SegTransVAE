@@ -31,7 +31,6 @@ class FinalConv(nn.Module): # Input channels are equal to output channels
     def forward(self, x):
         return self.layer(x)
 
-
 class Decoder(nn.Module):
     def __init__(self, img_dim, patch_dim, embedding_dim):
         super().__init__()
