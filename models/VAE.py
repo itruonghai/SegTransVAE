@@ -21,17 +21,17 @@ def normalization(planes, norm = 'gn'):
 class ResNetBlock(nn.Module):
     def __init__(self, in_channels, norm = 'gn'):
         super().__init__()
-        self.bn1 = normalization(in_channels, norm = norm)
-        self.relu1 = nn.ReLU(inplace= True)
-        self.conv1 = nn.Conv3d(in_channels, in_channels, kernel_size = 3, padding = 1)
-
-        self.bn2 = normalization(in_channels, norm = norm)
-        self.relu2 = nn.ReLU(inplace= True)
-        self.conv2 = nn.Conv3d(in_channels, in_channels, kernel_size = 3, padding = 1)
+        self.GreenBlock = nn.Sequential(
+            normalization(in_channels, norm = norm),
+            nn.ReLU(inplace= True),
+            nn.Conv3d(in_channels, in_channels, kernel_size = 3, padding = 1),
+            normalization(in_channels, norm = norm),
+            nn.ReLU(inplace= True),
+            nn.Conv3d(in_channels, in_channels, kernel_size = 3, padding = 1)
+        )
 
     def forward(self, x):
-        y = self.conv1(self.relu1(self.bn1(x)))
-        y = self.conv2(self.relu2(self.bn2(y)))
+        y = self.GreenBlock(x)
         return y + x   
 class VAE(nn.Module):
     def __init__(self, input_shape, latent_dim, num_channels):
