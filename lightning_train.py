@@ -8,7 +8,7 @@ model = BRATS(use_VAE = True)
 checkpoint_callback = ModelCheckpoint(
     monitor='val/MeanDiceScore',
     dirpath='./ckpt',
-    filename='segtransvae-{epoch:3d}-{val/MeanDiceScore: .4f}',
+    filename='segtransvae-{epoch:3d}-MeanDiceScore{val/MeanDiceScore:.4f}',
     save_top_k=1,
     mode='max',
     save_last= True,

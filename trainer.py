@@ -43,7 +43,7 @@ class BRATS(pl.LightningModule):
         self.dice_metric = DiceMetric(include_background=True, reduction="mean")
         self.dice_metric_batch = DiceMetric(include_background=True, reduction="mean_batch")
         self.best_val_dice = 0
-#         self.example_input_array = torch.rand((1,4,128,128,128))
+        # self.example_input_array = torch.rand((1,4,128,128,128))
     def forward(self, x, is_validation = True):
         return self.model(x, is_validation) 
     def training_step(self, batch, batch_index):

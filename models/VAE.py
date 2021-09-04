@@ -76,7 +76,7 @@ class VAE(nn.Module):
 
     def forward(self, x):   #x has shape = input_shape
         #Encoder
-        print(x.shape)
+        # print(x.shape)
         x = self.VAE_reshape(x) 
         shape = x.shape
 
