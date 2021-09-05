@@ -18,9 +18,14 @@ import pytorch_lightning as pl
 from models.SegTransVAE import SegTransVAE
 from data.brats import get_train_dataloader, get_val_dataloader
 from models.VAE import loss_vae
+# from adabelief_pytorch import AdaBelief
+
+# from models.TransBTS.TransBTS_downsample8x_skipconnection import TransBTS
+import csv
+import os
 
 class BRATS(pl.LightningModule):
-    def __init__(self, use_VAE = True, lr = 1e-4):
+    def __init__(self, use_VAE = False, lr = 1e-4, ):
         super().__init__()
         # self.model = SegResNet(
         #         blocks_down = [1,2,2,4],
@@ -33,6 +38,7 @@ class BRATS(pl.LightningModule):
         self.use_vae = use_VAE
         self.lr = lr
         self.model = SegTransVAE(128, 8, 4, 3, 512, 8, 4, 4096, use_VAE = use_VAE)
+#         _, self.model = TransBTS(dataset='brats', _conv_repr=True, _pe_type="learned")
         self.loss_vae = loss_vae()
         self.loss_function = DiceLoss(to_onehot_y=False, sigmoid=True, squared_pred=True)
         self.post_trans_images = Compose(
@@ -43,11 +49,17 @@ class BRATS(pl.LightningModule):
         self.dice_metric = DiceMetric(include_background=True, reduction="mean")
         self.dice_metric_batch = DiceMetric(include_background=True, reduction="mean_batch")
         self.best_val_dice = 0
-        # self.example_input_array = torch.rand((1,4,128,128,128))
+#          = self.logger.name
+#         self.csv = csv_path
+#         with open('{}'.format(self.csv), 'w') as f:
+#             writer = csv.writer(f)
+#             writer.writerow(['Epoch', 'Mean Dice Score', 'Dice TC', 'Dice WT', 'Dice ET'])
+#         self.example_input_array = torch.rand((1,4,128,128,128))
     def forward(self, x, is_validation = True):
         return self.model(x, is_validation) 
     def training_step(self, batch, batch_index):
         inputs, labels = (batch['image'], batch['label'])
+        
         if not self.use_vae:
             outputs = self.forward(inputs, is_validation=False)
             loss = self.loss_function(outputs, labels)
@@ -91,6 +103,16 @@ class BRATS(pl.LightningModule):
         self.log('val/DiceTC', metric_tc)
         self.log('val/DiceWT', metric_wt)
         self.log('val/DiceET', metric_et)
+        print("Curent epoch: ", self.current_epoch, self.logger.log_dir)
+        os.makedirs(self.logger.log_dir,  exist_ok=True)
+        if self.current_epoch == 0:
+            with open('{}/metric_log.csv'.format(self.logger.log_dir), 'w') as f:
+                writer = csv.writer(f)
+                writer.writerow(['Epoch', 'Mean Dice Score', 'Dice TC', 'Dice WT', 'Dice ET'])
+        with open('{}/metric_log.csv'.format(self.logger.log_dir), 'a') as f:
+            writer = csv.writer(f)
+            writer.writerow([self.current_epoch, mean_val_dice, metric_tc, metric_wt, metric_et])
+
         if mean_val_dice > self.best_val_dice:
             self.best_val_dice = mean_val_dice
             self.best_val_epoch = self.current_epoch
