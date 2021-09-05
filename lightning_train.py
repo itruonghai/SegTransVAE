@@ -15,15 +15,15 @@ checkpoint_callback = ModelCheckpoint(
     auto_insert_metric_name=False
 )
 trainer = pl.Trainer(#fast_dev_run = 10, 
-#                     accelerator='ddp',
-#                 overfit_batches=5,
-                     gpus = [0], 
+#                       accelerator='ddp',
+#                       overfit_batches=5,
+                        gpus = [0], 
                         precision=16,
-                     max_epochs = 200, 
-                     progress_bar_refresh_rate=10,  
-                     callbacks=[checkpoint_callback], 
+                        max_epochs = 300, 
+                        progress_bar_refresh_rate=10,  
+                        callbacks=[checkpoint_callback], 
 #                     auto_lr_find=True,
-                    num_sanity_val_steps=0,
+                        num_sanity_val_steps=0,
 #                     limit_train_batches=0.01, 
 #                     limit_val_batches=0.01
                      )
