@@ -11,7 +11,7 @@ args = parser.parse_args()
 
 os.system('cls||clear')
 
-model = BRATS(use_VAE = False)
+model = BRATS(use_VAE = True)
 checkpoint_callback = ModelCheckpoint(
     monitor='val/MeanDiceScore',
     dirpath='./ckpt/{}'.format(args.exp),
