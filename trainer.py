@@ -49,12 +49,7 @@ class BRATS(pl.LightningModule):
         self.dice_metric = DiceMetric(include_background=True, reduction="mean")
         self.dice_metric_batch = DiceMetric(include_background=True, reduction="mean_batch")
         self.best_val_dice = 0
-#          = self.logger.name
-#         self.csv = csv_path
-#         with open('{}'.format(self.csv), 'w') as f:
-#             writer = csv.writer(f)
-#             writer.writerow(['Epoch', 'Mean Dice Score', 'Dice TC', 'Dice WT', 'Dice ET'])
-#         self.example_input_array = torch.rand((1,4,128,128,128))
+
     def forward(self, x, is_validation = True):
         return self.model(x, is_validation) 
     def training_step(self, batch, batch_index):
@@ -103,7 +98,7 @@ class BRATS(pl.LightningModule):
         self.log('val/DiceTC', metric_tc)
         self.log('val/DiceWT', metric_wt)
         self.log('val/DiceET', metric_et)
-        print("Curent epoch: ", self.current_epoch, self.logger.log_dir)
+#         print("Curent epoch: ", self.current_epoch, self.logger.log_dir)
         os.makedirs(self.logger.log_dir,  exist_ok=True)
         if self.current_epoch == 0:
             with open('{}/metric_log.csv'.format(self.logger.log_dir), 'w') as f:
