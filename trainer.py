@@ -25,7 +25,7 @@ import csv
 import os
 
 class BRATS(pl.LightningModule):
-    def __init__(self, use_VAE = False, lr = 1e-4, ):
+    def __init__(self, use_VAE =True, lr = 1e-4, ):
         super().__init__()
         # self.model = SegResNet(
         #         blocks_down = [1,2,2,4],
