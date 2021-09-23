@@ -1,6 +1,8 @@
 import torch 
 import torch.nn as nn
 from models.ResNetBlock import ResNetBlock
+# from ResNetBlock import ResNetBlock
+
 from torch.nn import functional as F
 
 def calculate_total_dimension(a):
@@ -37,12 +39,12 @@ class VAE(nn.Module):
 
         self.mean = nn.Linear(self.in_channels, self.latent_dim)
         self.logvar = nn.Linear(self.in_channels, self.latent_dim)
-        self.epsilon = nn.Parameter(torch.randn(1, latent_dim))
+#         self.epsilon = nn.Parameter(torch.randn(1, latent_dim))
 
         #Decoder
         self.to_original_dimension = nn.Linear(self.latent_dim, flatten_input_shape_after_vae_reshape)
         self.Reconstruct = nn.Sequential(
-            nn.ReLU(inplace=True),
+            nn.LeakyReLU(0.2, inplace=True),
             nn.Conv3d(
                 self.encoder_channels, self.in_channels,
                 stride = 1, kernel_size = 1),
@@ -66,11 +68,12 @@ class VAE(nn.Module):
             nn.Upsample(scale_factor=2, mode = 'nearest'), 
             ResNetBlock(self.in_channels // 8), 
 
-            nn.GroupNorm(8, self.in_channels // 8),
-            nn.ReLU(inplace=True),
+            nn.InstanceNorm3d(self.in_channels // 8),
+            nn.LeakyReLU(0.2, inplace=True),
             nn.Conv3d(
                 self.in_channels // 8, num_channels, 
-                kernel_size = 1, stride = 1)
+                kernel_size = 3, padding = 1),
+#             nn.Sigmoid()
         )
 
 
@@ -86,29 +89,29 @@ class VAE(nn.Module):
 
         mean = self.mean(x)
         logvar = self.logvar(x)
-        sigma = torch.exp(0.5 * logvar)
-        sample = mean + self.epsilon * torch.exp(logvar)
+#         sigma = torch.exp(0.5 * logvar)
+        epsilon = torch.randn_like(logvar)
+        sample = mean + epsilon * torch.exp(logvar)
 
         #Decoder
         y = self.to_original_dimension(sample)
         y = y.view(*shape)
-        return self.Reconstruct(y), mean, sigma
+        return self.Reconstruct(y), mean, logvar
+    def total_params(self):
+        total = sum(p.numel() for p in self.parameters())
+        return format(total, ',')
 
-class loss_vae(nn.Module):
-    def __init__(self):
-        super().__init__()
+    def total_trainable_params(self):
+        total_trainable = sum(p.numel() for p in self.parameters() if p.requires_grad)
+        return format(total_trainable, ',')
 
-    def forward(self, recon_x, x, mu, sigma):
-        mse = F.mse_loss(recon_x, x)
-        kld = 0.5 * torch.mean(mu ** 2 + sigma ** 2 - torch.log(1e-8 + sigma ** 2) - 1)
-        loss = mse + kld
-        return loss
 
 if __name__ == "__main__":
-    x = torch.rand((1, 128, 16, 16, 16))
-    vae = VAE(input_shape = x.shape, latent_dim = 128, num_channels = 4)
+    x = torch.rand((1, 256, 16, 16, 16))
+    vae = VAE(input_shape = x.shape, latent_dim = 256, num_channels = 4)
     y = vae(x)
-    print(y.shape)
+    print(y[0].shape, y[1].shape, y[2].shape)
+    print(vae.total_trainable_params())
 
 
          

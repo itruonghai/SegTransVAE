@@ -14,7 +14,7 @@ class SegTransVAE(nn.Module):
 
         super().__init__()
         assert embedding_dim % num_heads == 0 
-        assert img_dim % patch_dim == 0 
+        assert img_dim[0] % patch_dim == 0 and img_dim[1] % patch_dim == 0 and img_dim[2] % patch_dim == 0 
 
         self.img_dim = img_dim 
         self.embedding_dim = embedding_dim
@@ -27,14 +27,14 @@ class SegTransVAE(nn.Module):
         self.conv_patch_representation = conv_patch_representation
         self.use_VAE = use_VAE
 
-        self.num_patches = int((img_dim // patch_dim) * (img_dim // patch_dim) * (img_dim // patch_dim))
+        self.num_patches = int((img_dim[0] // patch_dim) * (img_dim[1] // patch_dim) * (img_dim[2] // patch_dim))
         self.seq_length = self.num_patches  
         self.flatten_dim = 128 * num_channels
 
         self.linear_encoding = nn.Linear(self.flatten_dim, self.embedding_dim)
         if positional_encoding == "learned":
             self.position_encoding = LearnedPositionalEncoding(
-                self.seq_length, self.embedding_dim, self.seq_length
+                self.embedding_dim, self.seq_length
             )
         elif positional_encoding == "fixed":
             self.position_encoding = FixedPositionalEncoding(
@@ -50,13 +50,13 @@ class SegTransVAE(nn.Module):
         if self.conv_patch_representation:
             self.conv_x = nn.Conv3d(128, self.embedding_dim, kernel_size=3, stride=1, padding=1)
         self.encoder = Encoder(self.num_channels, 16)
-        self.bn = nn.BatchNorm3d(128)
-        self.relu = nn.ReLU(inplace = True)
+        self.bn = nn.InstanceNorm3d(128)
+        self.relu = nn.LeakyReLU(0.2, inplace=True)
         self.FeatureMapping = FeatureMapping(in_channel = self.embedding_dim)
-        self.FeatureMapping1 = FeatureMapping1(in_channel = self.embedding_dim // 4 )
-        self.decoder = Decoder(self.img_dim, self.patch_dim, self.embedding_dim)
+        self.FeatureMapping1 = FeatureMapping1(in_channel = self.embedding_dim // 6 )
+        self.decoder = Decoder(self.img_dim, self.patch_dim, self.embedding_dim, num_classes)
         if use_VAE:
-            self.vae = VAE(input_shape = (1, 128, 16, 16, 16) , latent_dim= 128, num_channels= self.num_channels)
+            self.vae = VAE(input_shape = (1, 128, 16, 16, 16) , latent_dim= 256, num_channels= self.num_channels)
     def encode(self, x):
         if self.conv_patch_representation:
             x1, x2, x3, x = self.encoder(x)
@@ -74,17 +74,19 @@ class SegTransVAE(nn.Module):
 
     def decode(self, x1, x2, x3, x):
         #x: (1, 4096, 512) -> (1, 16, 16, 16, 512)
+#         print("In decode...")
+#         print(" x1: {} \n x2: {} \n x3: {} \n x: {}".format( x1.shape, x2.shape, x3.shape, x.shape))
+#         break
         return self.decoder(x1, x2, x3, x)
 
     def forward(self, x, is_validation = True):
         x1, x2, x3, x = self.encode(x)
         x = x.view( x.size(0), 
-                    self.img_dim // self.patch_dim,
-                    self.img_dim // self.patch_dim, 
-                    self.img_dim // self.patch_dim, 
+                    self.img_dim[0] // self.patch_dim,
+                    self.img_dim[1] // self.patch_dim, 
+                    self.img_dim[2] // self.patch_dim, 
                     self.embedding_dim)
         x = x.permute(0, 4, 1, 2, 3).contiguous()
-        
         x = self.FeatureMapping(x)
         x = self.FeatureMapping1(x)  
         if self.use_VAE and not is_validation:
@@ -97,24 +99,24 @@ class SegTransVAE(nn.Module):
 
 
 class FeatureMapping(nn.Module):
-    def __init__(self, in_channel, norm = 'gn'):
+    def __init__(self, in_channel, norm = 'instance'):
         super().__init__()
         if norm == 'bn':
-            norm_layer_1 = nn.BatchNorm3d(in_channel // 4)
-            norm_layer_2 = nn.BatchNorm3d(in_channel // 4)
+            norm_layer_1 = nn.BatchNorm3d(in_channel // 6)
+            norm_layer_2 = nn.BatchNorm3d(in_channel // 6)
         elif norm == 'gn':
-            norm_layer_1 = nn.GroupNorm(8, in_channel // 4)
-            norm_layer_2 = nn.GroupNorm(8, in_channel // 4)
+            norm_layer_1 = nn.GroupNorm(8, in_channel // 6)
+            norm_layer_2 = nn.GroupNorm(8, in_channel // 6)
         elif norm == 'instance':
-            norm_layer_1 = nn.InstanceNorm3d(in_channel // 4)
-            norm_layer_2 = nn.InstanceNorm3d(in_channel // 4)
+            norm_layer_1 = nn.InstanceNorm3d(in_channel // 6)
+            norm_layer_2 = nn.InstanceNorm3d(in_channel // 6)
         self.feature_mapping = nn.Sequential(
-            nn.Conv3d(in_channel, in_channel // 4, kernel_size = 3, padding = 1),
+            nn.Conv3d(in_channel, in_channel // 6, kernel_size = 3, padding = 1),
             norm_layer_1,
-            nn.ReLU(inplace= True),
-            nn.Conv3d(in_channel // 4, in_channel // 4, kernel_size = 3, padding = 1),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv3d(in_channel // 6, in_channel // 6, kernel_size = 3, padding = 1),
             norm_layer_2,
-            nn.ReLU(inplace= True)
+            nn.LeakyReLU(0.2, inplace=True)
         )
         
     def forward(self, x):
@@ -122,7 +124,7 @@ class FeatureMapping(nn.Module):
 
 
 class FeatureMapping1(nn.Module):
-    def __init__(self, in_channel, norm = 'gn'):
+    def __init__(self, in_channel, norm = 'instance'):
         super().__init__()
         if norm == 'bn':
             norm_layer_1 = nn.BatchNorm3d(in_channel)
@@ -136,11 +138,12 @@ class FeatureMapping1(nn.Module):
         self.feature_mapping1 = nn.Sequential(
             nn.Conv3d(in_channel, in_channel, kernel_size = 3, padding = 1),
             norm_layer_1,
-            nn.ReLU(inplace= True),
+            nn.LeakyReLU(0.2, inplace=True),
             nn.Conv3d(in_channel, in_channel, kernel_size = 3, padding = 1),
             norm_layer_2,
-            nn.ReLU(inplace= True)
+            nn.LeakyReLU(0.2, inplace=True)
         )
     def forward(self, x):
         y = self.feature_mapping1(x)
         return x + y    
+    

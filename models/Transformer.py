@@ -78,7 +78,7 @@ class Transformer(nn.Module):
         return x
 
 class FixedPositionalEncoding(nn.Module):
-    def __init__(self, embedding_dim, max_length=512):
+    def __init__(self, embedding_dim, max_length=768):
         super(FixedPositionalEncoding, self).__init__()
 
         pe = torch.zeros(max_length, embedding_dim)
@@ -98,10 +98,12 @@ class FixedPositionalEncoding(nn.Module):
 
 
 class LearnedPositionalEncoding(nn.Module):
-    def __init__(self, max_position_embeddings, embedding_dim, seq_length):
+    def __init__(self, embedding_dim, seq_length):
         super(LearnedPositionalEncoding, self).__init__()
-        self.position_embeddings = nn.Parameter(torch.zeros(1, 4096, 512)) #8x
+        self.seq_length = seq_length
+        self.position_embeddings = nn.Parameter(torch.zeros(1, seq_length, embedding_dim)) #8x
 
     def forward(self, x, position_ids=None):
         position_embeddings = self.position_embeddings
+#         print(x.shape, self.position_embeddings.shape)
         return x + position_embeddings

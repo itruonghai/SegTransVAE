@@ -10,7 +10,7 @@ parser.add_argument('--exp', type=str, required=True)
 args = parser.parse_args()
 
 os.system('cls||clear')
-
+print("Training ...")
 model = BRATS(use_VAE = True)
 checkpoint_callback = ModelCheckpoint(
     monitor='val/MeanDiceScore',
@@ -49,4 +49,6 @@ trainer = pl.Trainer(#fast_dev_run = 10,
                      )
 # trainer.tune(model)
 trainer.fit(model)
+
+
 

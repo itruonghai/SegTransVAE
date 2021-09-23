@@ -16,9 +16,9 @@ from monai.data import DataLoader, Dataset
 import numpy as np
 import json
 set_determinism(seed=0)
-with open('/claraDevDay/Data/Brats2021/brats2021_fullpath.json') as f:
+with open('/workspace/vinbrain/pqdung_train/data/Brats2021/brats2021_experiment.json') as f:
     data = json.load(f)
-train_files, val_files, test_files = data['training'], data['validation'], data['testing']
+train_files, val_files, test_files = data['brats_3fold_80_20']['train_fold_1'], data['brats_3fold_80_20']['val_fold_1'], data['brats_3fold_80_20']['testing']
 print(len(train_files), len(val_files), len(test_files))
 
 class ConvertToMultiChannelBasedOnBratsClassesd(MapTransform):
@@ -54,10 +54,13 @@ def get_train_dataloader():
         [
             LoadImaged(keys=["image", "label"]),
             ConvertToMultiChannelBasedOnBratsClassesd(keys = ['label']),
-            RandSpatialCropd(keys=["image", "label"],
+            # RandSpatialCropd(keys=["image", "label"],
+            #                 roi_size = [128,128,128], 
+            #                 #  roi_size = [96,96,96],
+            #                 random_size = False),
+            CenterSpatialCropd(keys=["image", "label"],
                             roi_size = [128,128,128], 
-                            #  roi_size = [96,96,96],
-                            random_size = False),
+                            ),
             RandFlipd(keys = ["image", "label"],
                      prob = 0.5,
                      spatial_axis = 0),
@@ -100,3 +103,24 @@ def get_val_dataloader():
     val_loader = DataLoader(val_ds, batch_size=1, shuffle=False, num_workers=4)
     
     return val_loader
+
+def get_test_dataloader():
+    test_transform = Compose(
+        [
+            LoadImaged(keys=["image", "label"]),
+            ConvertToMultiChannelBasedOnBratsClassesd(
+                keys = ['label']),
+            CenterSpatialCropd(keys=["image", "label"],
+                            roi_size = [128,128,128], 
+                            ),
+            NormalizeIntensityd(keys = "image",
+                               nonzero = True,
+                               channel_wise = True),
+            ToTensord(keys=["image", "label"]),
+        ]
+    )
+    test_ds = Dataset(data=test_files, transform=test_transform)
+    test_loader = DataLoader(test_ds, batch_size=1, shuffle=False, num_workers=4)
+    
+    return test_loader
+
