@@ -1,4 +1,4 @@
-# SegTransVAE
+# SegTransVAE: Hybrid CNN - Transformer with Regularization for medical image segmentation
 This repo is the official implementation for SegTransVAE. 
 
 ## SegTransVAE 
