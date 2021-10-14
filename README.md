@@ -16,7 +16,10 @@ Here is the network architecture of SegTransVAE, a hybrid CNN-Transformer-VAE fo
 
 ## Data 
 After downloading BraTS 2021 dataset, create a json file, which contains the path to images and the correspoding labels as follow
-![Data configuration](figure/data.png)
+<!-- ![Data configuration](figure/data.png) -->
+<p align="center">
+<img src="figure/data.png" width=70% height=70%>
+</p>
 Then, use data/brats.py file to read the data by monai. 
 
 ## Training
@@ -37,12 +40,21 @@ Then the evaluation metric will print in the terminal, including dice score and 
 
 ## Quantitative result
 Quantitive comparison of performance on BraTS 2021 (our test set)
-![table_brats](figure/table_brats.png)
+<!-- ![table_brats](figure/table_brats.png) -->
+
+<p align="center">
+<img src="figure/table_brats.png" width=70% height=70%>
+</p>
 
 Quantitive comparison of performance on KiTS19 with 5-fold cross validation. 
-![table_kidney](figure/table_kidney.png)
-![table_tumor](figure/table_kidneytumor.png)
-
+<!-- ![table_kidney](figure/table_kidney.png) -->
+<p align="center">
+<img src="figure/table_kidney.png" width=70% height=70%>
+</p>
+<!-- ![table_tumor](figure/table_kidneytumor.png) -->
+<p align="center">
+<img src="figure/table_kidneytumor.png" width=70% height=70%>
+</p>
 
 ## Visual Comparision with SOTA Methods 
 Visual Comparision of our method on BraTS 2021 and KiTS19 dataset with 3D U-Net, SegresnetVAE and UNETR. 
@@ -51,6 +63,9 @@ Visual Comparision of our method on BraTS 2021 and KiTS19 dataset with 3D U-Net,
 ![kits](figure/kits.png)
 
 ## Complexity 
-![complexity](figure/complexity.png)
+The complexity of SegTransVAE is compared to other models in terms of the number of parameters and the averaged inference time. The benchmark is calculated based on the input size of (4, 128, 128, 128)
+<!-- ![complexity](figure/complexity.png) -->
 
-
+<p align="center">
+<img src="figure/complexity.png" width=70% height=70%>
+</p>
