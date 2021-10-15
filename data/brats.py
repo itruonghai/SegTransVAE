@@ -16,7 +16,7 @@ from monai.data import DataLoader, Dataset
 import numpy as np
 import json
 set_determinism(seed=0)
-with open('/workspace/vinbrain/pqdung_train/data/Brats2021/brats2021_experiment.json') as f:
+with open('brats2021_experiment.json') as f:
     data = json.load(f)
 train_files, val_files, test_files = data['brats_3fold_80_20']['train_fold_1'], data['brats_3fold_80_20']['val_fold_1'], data['brats_3fold_80_20']['testing']
 print(len(train_files), len(val_files), len(test_files))
